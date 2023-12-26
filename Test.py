@@ -45,7 +45,8 @@ class CNN(nn.Module):
         x = self.layer1(input)
         x = self.layer2(x)
         x = einops.rearrange(x, 'b c h w -> b (c h w)')
-        output = F.log_softmax(x, dim=1)
+        x = self.dropout(x)
+        output = self.fc(x)
         return output
 
 
@@ -63,5 +64,5 @@ def train(args, model, device, train_loader, optimizer, epoch):
         optimizer.step()
 
         if batch_idx % args.log_interval == 0:
-            print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100. * batch_idx / len(train_loader)}%)]\tLoss: {loss.item()}')
+            print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader)}%)]\tLoss: {loss.item()}')
 
