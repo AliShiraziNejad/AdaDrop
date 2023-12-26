@@ -1,10 +1,16 @@
+import argparse
+
 import torch
-import numpy as np
-import random
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import StepLR
+
+import einops
+
+import numpy as np
+import random
 
 SEED = 0
 
@@ -16,66 +22,46 @@ torch.use_deterministic_algorithms(True)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
 
-train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-
-
-class NeuralNet(nn.Module):
+class CNN(nn.Module):
     def __init__(self):
-        super(NeuralNet, self).__init__()
-        self.flatten = nn.Flatten()
-        self.fc_layers = nn.Sequential(
-            nn.Linear(28 * 28, 512),
+        super(CNN, self).__init__()
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(512, 256),
+            nn.MaxPool2d(kernel_size=2, stride=2))
+
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(256, 10)
-        )
+            nn.MaxPool2d(kernel_size=2, stride=2))
 
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.fc_layers(x)
-        return logits
+        self.dropout = nn.Dropout(p=0.25)
+        self.fc = nn.Linear(in_features=64 * 8 * 8, out_features=10)
+
+    def forward(self, input):
+        x = self.layer1(input)
+        x = self.layer2(x)
+        x = einops.rearrange(x, 'b c h w -> b (c h w)')
+        output = F.log_softmax(x, dim=1)
+        return output
 
 
-model = NeuralNet()
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-epochs = 10
-for epoch in range(epochs):
+def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
-    for images, labels in train_loader:
-        # Forward pass
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-
-        # Backward pass and optimization
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
+
+        output = model(data)
+        loss = F.nll_loss(output, target)
+
         loss.backward()
+
         optimizer.step()
 
-    print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
+        if batch_idx % args.log_interval == 0:
+            print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100. * batch_idx / len(train_loader)}%)]\tLoss: {loss.item()}')
 
-model.eval()
-with torch.no_grad():
-    correct = 0
-    total = 0
-    for images, labels in test_loader:
-        outputs = model(images)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-
-print(f'Accuracy: {100 * correct / total}%')
