@@ -1,3 +1,16 @@
+"""
+AdaDrop PyTorch implementation
+
+AdaDrop:    introduces the gradient statistics during back propagation to
+            influence the probability of dropping a node rather than naively
+            sampling from a uniform distribution in traditional Dropout
+
+
+Credits: PyTorch training setup was heavily inspired by the works in: https://github.com/pytorch/examples/blob/main/mnist/main.py#L122
+
+Author(s): Ali Shirazi-Nejad (University of Texas at Arlington, Vision-Learning-Mining Lab)
+"""
+
 import argparse
 
 import torch
@@ -64,5 +77,35 @@ def train(args, model, device, train_loader, optimizer, epoch):
         optimizer.step()
 
         if batch_idx % args.log_interval == 0:
-            print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader)}%)]\tLoss: {loss.item()}')
+            print(
+                f"Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader)}%)]\tLoss: {loss.item()}")
 
+            if args.dry_run:
+                break
+
+
+def test(model, device, test_loader):
+    model.eval()
+    total_test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            total_test_loss += F.nll_loss(output, target, reduction='sum').item()
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    total_test_loss /= len(test_loader.dataset)
+
+    print(
+        f"\nTest set: Average loss: {total_test_loss}, Accuracy: {correct}/{len(test_loader.dataset)} ({100.0 * correct / len(test_loader.dataset)}%)\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="AdaDrop Training and Testing")
+    parser.add_argument('--batch_size', type=int, default=256, )
+
+
+if __name__ == "__main__":
+    main()
