@@ -6,5 +6,5 @@ python main.py \
 --lr 0.005 \
 --mps \
 --seed 1 \
---log_interval 100 \
+--log_interval 2 \
 --save_model

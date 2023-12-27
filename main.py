@@ -350,8 +350,6 @@ def test(model, device, test_loader, log_file, epoch, writer):
 
 
 def main():
-    writer = SummaryWriter('runs/experiment_name')
-
     valid_datasets = {"MNIST", "CIFAR10"}
 
     valid_models = {
@@ -460,8 +458,9 @@ def main():
     for model_name, model in valid_models.items():
         model.to(device)
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
         scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs)
+
+        writer = SummaryWriter(f'runs/AdaDropTB/{model_name}')
 
         with open(f"{model_name}.log", "w") as log_file:
             for epoch in range(1, args.epochs + 1):
@@ -472,7 +471,7 @@ def main():
             if args.save_model:
                 torch.save(model.state_dict(), f"{args.dataset}_{model_name}.pt")
 
-    writer.close()
+        writer.close()
 
 
 if __name__ == "__main__":
