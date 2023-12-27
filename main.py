@@ -303,7 +303,7 @@ class CNN_AdaDrop_norm(nn.Module):
         return output
 
 
-def train(args, model, device, train_loader, optimizer, epoch, log_file):
+def train(args, model, device, train_loader, optimizer, epoch, log_file, writer):
     model.train()
     for batch_idx, (inputs, labels) in enumerate(train_loader):
         inputs, labels = inputs.to(device), labels.to(device)
@@ -320,29 +320,38 @@ def train(args, model, device, train_loader, optimizer, epoch, log_file):
             log_file.write(
                 f"Train Epoch: {epoch} [{batch_idx * len(inputs)}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.4f}%)]\tLoss: {loss.item():.4f}\n")
 
-            if args.dry_run:
-                break
+        global_step = (epoch - 1) * len(train_loader) + batch_idx
+        writer.add_scalar('Training Loss', loss, global_step=global_step)
+
+        if args.dry_run:
+            break
 
 
-def test(model, device, testloader, log_file):
+def test(model, device, test_loader, log_file, epoch, writer):
     model.eval()
     total_test_loss = 0
     correct = 0
     with torch.no_grad():
-        for data, target in testloader:
+        for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
             total_test_loss += F.nll_loss(output, target, reduction='sum').item()
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-    total_test_loss /= len(testloader.dataset)
+    total_test_loss /= len(test_loader.dataset)
 
     log_file.write(
-        f"\nTest set: Average loss: {total_test_loss}, Accuracy: {correct}/{len(testloader.dataset)} ({100.0 * correct / len(testloader.dataset)}%)\n")
+        f"\nTest set: Average loss: {total_test_loss}, Accuracy: {correct}/{len(test_loader.dataset)} ({100.0 * correct / len(test_loader.dataset)}%)\n")
+
+    test_accuracy = 100.0 * correct / len(test_loader.dataset)
+    writer.add_scalar('Test Loss', total_test_loss, global_step=epoch)
+    writer.add_scalar('Test Accuracy', test_accuracy, global_step=epoch)
 
 
 def main():
+    writer = SummaryWriter('runs/experiment_name')
+
     valid_datasets = {"MNIST", "CIFAR10"}
 
     valid_models = {
@@ -456,12 +465,14 @@ def main():
 
         with open(f"{model_name}.log", "w") as log_file:
             for epoch in range(1, args.epochs + 1):
-                train(args, model, device, trainloader, optimizer, epoch, log_file)
-                test(model, device, testloader, log_file)
+                train(args, model, device, trainloader, optimizer, epoch, log_file, writer)
+                test(model, device, testloader, log_file, epoch, writer)
                 scheduler.step()
 
             if args.save_model:
                 torch.save(model.state_dict(), f"{args.dataset}_{model_name}.pt")
+
+    writer.close()
 
 
 if __name__ == "__main__":
