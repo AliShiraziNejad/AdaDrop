@@ -25,6 +25,8 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import random
 
+from tqdm import tqdm
+
 from models import *
 
 
@@ -36,8 +38,11 @@ def init_weights(m):
 
 
 def train(args, model, device, train_loader, optimizer, epoch, log_file, writer):
+    pbar = tqdm(enumerate(train_loader), total=len(train_loader), desc=f'Epoch {epoch}')
+
     model.train()
-    for batch_idx, (inputs, labels) in enumerate(train_loader):
+
+    for batch_idx, (inputs, labels) in pbar:
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
 
@@ -47,6 +52,8 @@ def train(args, model, device, train_loader, optimizer, epoch, log_file, writer)
         loss.backward()
 
         optimizer.step()
+
+        pbar.set_description(f'Epoch {epoch} Loss: {loss.item():.6f}')
 
         if batch_idx % args.log_interval == 0:
             log_file.write(
@@ -60,16 +67,21 @@ def train(args, model, device, train_loader, optimizer, epoch, log_file, writer)
 
 
 def test(model, device, test_loader, log_file, epoch, writer):
+    pbar = tqdm(enumerate(test_loader), total=len(test_loader), desc=f'Testing Epoch {epoch}')
+
     model.eval()
     total_test_loss = 0
     correct = 0
+
     with torch.no_grad():
-        for data, target in test_loader:
+        for batch_idx, (data, target) in pbar:
             data, target = data.to(device), target.to(device)
             output = model(data)
             total_test_loss += F.nll_loss(output, target, reduction='sum').item()
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
+
+            pbar.set_description(f'Testing Epoch {epoch} Loss: {total_test_loss / (batch_idx + 1):.6f}')
 
     total_test_loss /= len(test_loader.dataset)
 
@@ -203,7 +215,8 @@ def main():
                 scheduler.step()
 
             if args.save_model:
-                torch.save(model.state_dict(), f"{args.dataset}_{model_name}.pt")
+                model_path = f"{args.dataset}_{model_name}.pt"
+                torch.save(model.state_dict(), model_path)
 
         writer.close()
 
