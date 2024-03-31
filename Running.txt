@@ -1,10 +1,21 @@
-python main.py \
---dataset "CIFAR10" \
+python main_tb.py \
+--dataset "MNIST" \
 --batch_size 256 \
 --test_batch_size 1024 \
---epochs 25 \
+--epochs 3 \
 --lr 0.005 \
 --mps \
 --seed 1 \
---log_interval 2 \
+--log_interval 1 \
+--save_model
+
+python main_wnb.py \
+--dataset "MNIST" \
+--batch_size 256 \
+--test_batch_size 1024 \
+--epochs 3 \
+--lr 0.005 \
+--mps \
+--seed 1 \
+--log_interval 1 \
 --save_model
