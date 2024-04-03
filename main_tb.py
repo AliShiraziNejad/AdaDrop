@@ -212,7 +212,7 @@ def main():
                     model_path = f"{args.dataset}_{model_name}.pt"
                     torch.save(model.state_dict(), model_path)
 
-            writer.close()
+                writer.close()
 
 
 if __name__ == "__main__":
