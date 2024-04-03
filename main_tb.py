@@ -96,11 +96,9 @@ def main():
     valid_datasets = {"MNIST", "CIFAR10"}
 
     valid_models = {
-        "CNN_noDO": CNN_noDO(),
-        "CNN_regDO": CNN_regDO(),
-        "CNN_AdaDrop_inverse": CNN_AdaDrop_inverse(),
-        "CNN_AdaDrop_softmax": CNN_AdaDrop_softmax(),
-        "CNN_AdaDrop_norm": CNN_AdaDrop_norm()
+        # "CNN_noDO": CNN_noDO(),
+        # "CNN_regDO": CNN_regDO(),
+        # "CNN_AdaDrop": CNN_AdaDrop()
     }
 
     parser = argparse.ArgumentParser(description="AdaDrop Training and Testing")
