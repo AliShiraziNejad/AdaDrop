@@ -103,9 +103,9 @@ class CNN_regDO(nn.Module):
         return output
 
 
-class CNN_AdaDrop_inverse(nn.Module):
-    def __init__(self):
-        super(CNN_AdaDrop_inverse, self).__init__()
+class CNN_AdaDrop(nn.Module):
+    def __init__(self, scaling='inverse', N=5):
+        super(CNN_AdaDrop, self).__init__()
         self.layer1 = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(32),
@@ -129,8 +129,8 @@ class CNN_AdaDrop_inverse(nn.Module):
         self.fc1 = nn.Linear(in_features=128, out_features=512)
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, 10)
-        self.adaDrop1 = AdaDrop(self.fc1)
-        self.adaDrop2 = AdaDrop(self.fc2)
+        self.adaDrop1 = AdaDrop(self.fc1, scaling=scaling, N=N)
+        self.adaDrop2 = AdaDrop(self.fc2, scaling=scaling, N=N)
 
     def forward(self, input):
         x = self.layer1(input)
