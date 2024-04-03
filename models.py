@@ -79,7 +79,8 @@ class CNN_regDO(nn.Module):
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, 10)
 
-        self.dropout = nn.Dropout(p=0.25)
+        self.dropout1 = nn.Dropout(p=0.25)
+        self.dropout2 = nn.Dropout(p=0.25)
 
     def forward(self, input):
         x = self.layer1(input)
@@ -88,15 +89,14 @@ class CNN_regDO(nn.Module):
         x = self.avg_pool(x)
         x = einops.rearrange(x, 'b c h w -> b (c h w)')
 
-        x = self.dropout(x)
         x = self.fc1(x)
         x = F.relu(x)
+        x = self.dropout1(x)
 
-        x = self.dropout(x)
         x = self.fc2(x)
         x = F.relu(x)
+        x = self.dropout2(x)
 
-        x = self.dropout(x)
         x = self.fc3(x)
         output = F.log_softmax(x, dim=1)
 
@@ -129,10 +129,8 @@ class CNN_AdaDrop_inverse(nn.Module):
         self.fc1 = nn.Linear(in_features=128, out_features=512)
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, 10)
-
-        self.adaDrop1 = AdaDrop(self.fc1, scaling="inverse", N=1)
-        self.adaDrop2 = AdaDrop(self.fc2, scaling="inverse", N=1)
-        self.adaDrop3 = AdaDrop(self.fc3, scaling="inverse", N=1)
+        self.adaDrop1 = AdaDrop(self.fc1, 1, 512, scaling="inverse", N=128)
+        self.adaDrop2 = AdaDrop(self.fc2, 1, 128, scaling="inverse", N=128)
 
     def forward(self, input):
         x = self.layer1(input)
@@ -141,15 +139,14 @@ class CNN_AdaDrop_inverse(nn.Module):
         x = self.avg_pool(x)
         x = einops.rearrange(x, 'b c h w -> b (c h w)')
 
-        x = self.AdaDrop(x)
         x = self.fc1(x)
         x = F.relu(x)
+        x = self.adaDrop1(x)
 
-        x = self.AdaDrop(x)
         x = self.fc2(x)
         x = F.relu(x)
+        x = self.adaDrop2(x)
 
-        x = self.AdaDrop(x)
         x = self.fc3(x)
         output = F.log_softmax(x, dim=1)
 
@@ -182,9 +179,8 @@ class CNN_AdaDrop_softmax(nn.Module):
         self.fc1 = nn.Linear(in_features=128, out_features=512)
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, 10)
-        self.adaDrop1 = AdaDrop(self.fc1, scaling="softmax", N=1)
-        self.adaDrop2 = AdaDrop(self.fc2, scaling="softmax", N=1)
-        self.adaDrop3 = AdaDrop(self.fc3, scaling="softmax", N=1)
+        self.adaDrop1 = AdaDrop(self.fc1, 1, 512, scaling="softmax", N=128)
+        self.adaDrop2 = AdaDrop(self.fc2, 1, 128, scaling="softmax", N=128)
 
     def forward(self, input):
         x = self.layer1(input)
@@ -193,15 +189,14 @@ class CNN_AdaDrop_softmax(nn.Module):
         x = self.avg_pool(x)
         x = einops.rearrange(x, 'b c h w -> b (c h w)')
 
-        x = self.AdaDrop1(x)
         x = self.fc1(x)
         x = F.relu(x)
+        x = self.adaDrop1(x)
 
-        x = self.AdaDrop2(x)
         x = self.fc2(x)
         x = F.relu(x)
+        x = self.adaDrop2(x)
 
-        x = self.AdaDrop3(x)
         x = self.fc3(x)
         output = F.log_softmax(x, dim=1)
 
@@ -234,9 +229,8 @@ class CNN_AdaDrop_norm(nn.Module):
         self.fc1 = nn.Linear(in_features=128, out_features=512)
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, 10)
-        self.adaDrop1 = AdaDrop(self.fc1, scaling="norm", N=1)
-        self.adaDrop2 = AdaDrop(self.fc2, scaling="norm", N=1)
-        self.adaDrop3 = AdaDrop(self.fc3, scaling="norm", N=1)
+        self.adaDrop1 = AdaDrop(self.fc1, 1, 512, scaling="norm", N=1)
+        self.adaDrop2 = AdaDrop(self.fc2, 1, 128, scaling="norm", N=1)
 
     def forward(self, input):
         x = self.layer1(input)
@@ -245,15 +239,14 @@ class CNN_AdaDrop_norm(nn.Module):
         x = self.avg_pool(x)
         x = einops.rearrange(x, 'b c h w -> b (c h w)')
 
-        x = self.AdaDrop1(x)
         x = self.fc1(x)
         x = F.relu(x)
+        x = self.adaDrop1(x)
 
-        x = self.AdaDrop2(x)
         x = self.fc2(x)
         x = F.relu(x)
+        x = self.adaDrop2(x)
 
-        x = self.AdaDrop3(x)
         x = self.fc3(x)
         output = F.log_softmax(x, dim=1)
 

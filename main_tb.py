@@ -16,7 +16,6 @@ import argparse
 import torch
 import torch.optim as optim
 import torch.nn.init as init
-from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
@@ -196,15 +195,14 @@ def main():
                                    download=True,
                                    transform=transform)
 
-    trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
-    testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, num_workers=6, shuffle=True, drop_last=True)
+    testloader = DataLoader(testset, batch_size=args.batch_size, num_workers=2, shuffle=False, drop_last=True)
 
     for model_name, model in valid_models.items():
         model.apply(init_weights)
         model.to(device)
 
         optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-        scheduler = CosineAnnealingLR(optimizer, eta_min=0.0001, T_max=args.epochs)
 
         writer = SummaryWriter(f'runs/AdaDropTB/{model_name}')
 
@@ -212,7 +210,6 @@ def main():
             for epoch in range(1, args.epochs + 1):
                 train(args, model, device, trainloader, optimizer, epoch, log_file, writer)
                 test(model, device, testloader, log_file, epoch, writer)
-                scheduler.step()
 
             if args.save_model:
                 model_path = f"{args.dataset}_{model_name}.pt"
