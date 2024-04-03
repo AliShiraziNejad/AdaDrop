@@ -95,11 +95,8 @@ def test(model, device, test_loader, log_file, epoch, writer):
 def main():
     valid_datasets = {"MNIST", "CIFAR10"}
 
-    valid_models = {
-        # "CNN_noDO": CNN_noDO(),
-        # "CNN_regDO": CNN_regDO(),
-        # "CNN_AdaDrop": CNN_AdaDrop()
-    }
+    adaDrop_Scaling = ["inverse", "softmax", "norm"]
+    adaDrop_N = [1, 5, 250]
 
     parser = argparse.ArgumentParser(description="AdaDrop Training and Testing")
 
@@ -196,24 +193,26 @@ def main():
     trainloader = DataLoader(trainset, batch_size=args.batch_size, num_workers=6, shuffle=True, drop_last=True)
     testloader = DataLoader(testset, batch_size=args.batch_size, num_workers=2, shuffle=False, drop_last=True)
 
-    for model_name, model in valid_models.items():
-        model.apply(init_weights)
-        model.to(device)
+    for scaling in adaDrop_Scaling:
+        for N_value in adaDrop_N:
+            model = CNN_AdaDrop(scaling=scaling, N=N_value)
+            model_name = f"CNN_AdaDrop_{scaling}_{N_value}"
+            model.apply(init_weights)
+            model.to(device)
 
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+            optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+            writer = SummaryWriter(f'runs/AdaDropTB/{model_name}')
 
-        writer = SummaryWriter(f'runs/AdaDropTB/{model_name}')
+            with open(f"{model_name}.log", "w") as log_file:
+                for epoch in range(1, args.epochs + 1):
+                    train(args, model, device, trainloader, optimizer, epoch, log_file, writer)
+                    test(model, device, testloader, log_file, epoch, writer)
 
-        with open(f"{model_name}.log", "w") as log_file:
-            for epoch in range(1, args.epochs + 1):
-                train(args, model, device, trainloader, optimizer, epoch, log_file, writer)
-                test(model, device, testloader, log_file, epoch, writer)
+                if args.save_model:
+                    model_path = f"{args.dataset}_{model_name}.pt"
+                    torch.save(model.state_dict(), model_path)
 
-            if args.save_model:
-                model_path = f"{args.dataset}_{model_name}.pt"
-                torch.save(model.state_dict(), model_path)
-
-        writer.close()
+            writer.close()
 
 
 if __name__ == "__main__":
